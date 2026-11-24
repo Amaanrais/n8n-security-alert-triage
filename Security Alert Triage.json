@@ -1,0 +1,291 @@
+{
+  "name": "Security Alert Triage",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b3460c4c-d484-4382-89ce-304789d64ff9",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "const alerts = [\n  { source: \"EDR\", subject: \"Ransomware behaviour detected\", body: \"Host FIN-LAPTOP-07 is mass-encrypting files in /Shares/Finance. Process: svchost32.exe (unsigned).\" },\n  { source: \"IAM\", subject: \"Impossible travel login\", body: \"User j.meyer logged in from Berlin at 09:02 and from Lagos at 09:14. MFA was approved both times.\" },\n  { source: \"WAF\", subject: \"SQL injection attempts blocked\", body: \"312 blocked requests with UNION SELECT payloads against /api/orders from one IP in 10 minutes.\" },\n  { source: \"SIEM\", subject: \"Multiple failed logins\", body: \"7 failed logins for user intern01 on the VPN, followed by a successful login.\" },\n  { source: \"Vuln scanner\", subject: \"Outdated TLS version\", body: \"Internal wiki server still accepts TLS 1.0. No external exposure.\" },\n  { source: \"Email gateway\", subject: \"Newsletter flagged as spam\", body: \"Marketing newsletter from a known vendor was quarantined as bulk mail.\" }\n];\nreturn alerts.map(a => ({ json: a }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "814ead61-0520-49a8-849f-72ed7b3efba7",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "inputText": "=Source: {{ $json.source }}. Subject: {{ $json.subject }}. Details: {{ $json.body }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "Critical ",
+              "description": "Active compromise or ongoing damage, such as ransomware, data exfiltration or a confirmed account takeover. Needs immediate response."
+            },
+            {
+              "category": "High",
+              "description": "Signs the attacker may have succeeded or gained access, e.g. a successful login after many failures, or impossible-travel logins. NOT for attacks that were fully blocked."
+            },
+            {
+              "category": "Medium",
+              "description": "Attack attempts that were blocked or failed with no sign of success (e.g. blocked WAF or SQL injection attempts), or an exploitable vulnerability. Not for routine spam or bulk mail."
+            },
+            {
+              "category": "Low",
+              "description": "No real threat: routine spam or bulk/marketing email, false positives, traffic from known vendors, or minor hygiene issues on internal-only systems with no external exposure."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "6991b17d-b286-4d3a-b62a-f8457f19a655",
+      "name": "Text Classifier"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        208
+      ],
+      "id": "5f529557-e8e2-421a-a481-93fb89e9f86b",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "66ff4eb1-54ef-4f76-89dd-2d92a522cb04",
+              "name": "action",
+              "value": "Isolate host and page on-call now",
+              "type": "string"
+            },
+            {
+              "id": "a0265208-654c-424b-9141-7b9bd5facef2",
+              "name": "severity",
+              "value": "critical",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        816,
+        -208
+      ],
+      "id": "6c9989ba-2303-49b2-8f59-ab7dc9fb9aca",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6e4aa023-b1b5-4300-ae37-da58608f86d0",
+              "name": "action",
+              "value": "Open incident ticket, review within 1 hour",
+              "type": "string"
+            },
+            {
+              "id": "bf7a141a-d2c6-42f0-8078-a4f33e2a7f72",
+              "name": "severity",
+              "value": "high",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        816,
+        -80
+      ],
+      "id": "41fb2928-8548-4a01-853f-f4cc36c178e8",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ec182d66-d426-4c13-91bb-c317380ded23",
+              "name": "action",
+              "value": "Add to daily review queue",
+              "type": "string"
+            },
+            {
+              "id": "969f3023-6e9c-43fb-8f3d-805a2a16192a",
+              "name": "severity",
+              "value": "medium",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        816,
+        96
+      ],
+      "id": "94f39687-6449-4b52-91c3-3398ff7e4390",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "eaca341e-ec51-4a4b-9973-535c65aeaf47",
+              "name": "action",
+              "value": "Log only",
+              "type": "string"
+            },
+            {
+              "id": "ad319980-9dba-4383-afde-795cd2cda246",
+              "name": "severity",
+              "value": "low",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        816,
+        208
+      ],
+      "id": "71ee9cb0-bde1-4cb5-9ace-9193a572dddc",
+      "name": "Edit Fields3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Classifier": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "4ef78642-f113-4a3d-8088-b8e9dc5e7b35",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e66b02e53a8a6fd091833c01d42462bcf991073220767de5db550d289d880c43"
+  },
+  "nodeGroups": [],
+  "id": "b2SD9K6hB2KVpp2p",
+  "tags": []
+}
